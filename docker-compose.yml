@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 1. Database Vettoriale Qdrant
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: qdrant_db
+    restart: always
+    ports:
+      - "6333:6333" # Porta per API REST/gRPC
+      - "6334:6334" # Porta per UI web
+    volumes:
+      - ./qdrant_data:/qdrant/storage # Mantiene i dati permanenti
+
+  # 2. Server LLM Locale Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama_server
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_models:/root/.ollama
+
+  # 3. Applicazione FastAPI
+  rag_api:
+    build: . # Istruisce Docker a costruire l'immagine usando il Dockerfile
+    container_name: rag_api_server
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app # Monta la cartella del progetto nel container
+    environment:
+      OLLAMA_BASE_URL: "http://ollama:11434"
+      QDRANT_HOST: "qdrant"
+      EMBEDDING_MODEL_NAME: "nomic-embed-text"
+    depends_on:
+      - qdrant
+      - ollama
+    command: uvicorn RAG.RagController:app --host 0.0.0.0 --port 8000 --reload

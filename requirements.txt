@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+
+langchain
+langchain-community
+
+qdrant-client
+
+pypdf
+python-docx
+tiktoken
+
+pydantic
+python-dotenv
+
+pydantic_settings
