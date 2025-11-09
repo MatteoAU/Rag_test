@@ -24,12 +24,7 @@ class StatusResponse(BaseModel):
 
 # --- Endpoint dell'API (Controller) ---
 
-@app.get("/status", response_model=StatusResponse, tags=["Utility"])
-def get_status():
-    """Controlla lo stato del server."""
-    return {"status": "ok", "message": f"Server RAG {settings.PROJECT_NAME} in esecuzione."}
-
-@app.post("/api/v1/document/index", response_model=StatusResponse, tags=["Indexing"])
+@app.post("/api/document/index", response_model=StatusResponse, tags=["Indexing"])
 async def index_document(file: UploadFile = File(...)):
     """Carica un documento, lo suddivide, vettorizza e lo salva in Qdrant."""
     
@@ -53,7 +48,7 @@ async def index_document(file: UploadFile = File(...)):
 
     return {"status": "success", "message": f"File '{file.filename}' indicizzato con successo in Qdrant."}
 
-@app.post("/api/v1/rag/query", response_model=QueryResponse, tags=["Query"])
+@app.post("/api/query", response_model=QueryResponse, tags=["Query"])
 def rag_query(request: QueryRequest):
     """Esegue una query RAG e restituisce la risposta dell'LLM."""
     try:
