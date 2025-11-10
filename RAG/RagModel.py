@@ -23,6 +23,10 @@ class RAGModel:
         )
         logger.info(f"Embeddings configurati: {settings.EMBEDDING_MODEL_NAME}")
 
+        # Rileva automaticamente la dimensione degli embeddings
+        self.embedding_dimension = self._get_embedding_dimension()
+        logger.info(f"Dimensione embeddings rilevata automaticamente: {self.embedding_dimension}")
+
         # Componente LLM
         self.llm = Ollama(
             model=settings.OLLAMA_MODEL_NAME,
@@ -55,6 +59,15 @@ class RAGModel:
         )
         logger.info(f"VectorStore Qdrant inizializzato: collection={settings.QDRANT_COLLECTION_NAME}")
 
+    def _get_embedding_dimension(self) -> int:
+        """Rileva automaticamente la dimensione degli embeddings del modello."""
+        logger.info("Rilevamento dimensione embeddings...")
+        # Crea un embedding di prova con un testo semplice
+        test_embedding = self.embeddings.embed_query("test")
+        dimension = len(test_embedding)
+        logger.info(f"✓ Dimensione embeddings rilevata: {dimension}")
+        return dimension
+
     def _ensure_collection_exists(self):
         """Crea la collection in Qdrant se non esiste già."""
         try:
@@ -70,7 +83,7 @@ class RAGModel:
                 self.client.create_collection(
                     collection_name=settings.QDRANT_COLLECTION_NAME,
                     vectors_config=VectorParams(
-                        size=settings.EMBEDDING_DIMENSION,
+                        size=self.embedding_dimension,  # Usa la dimensione rilevata automaticamente
                         distance=Distance.COSINE
                     )
                 )

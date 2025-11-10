@@ -1,8 +1,8 @@
 from langchain_community.document_loaders import PyPDFLoader, TextLoader
-from langchain_core.documents import Document  # ✅ Import CORRETTO
+from langchain_core.documents import Document
 from langchain_core.prompts import PromptTemplate
 from RAG.RagModel import RAGModel
-from Config.Config import settings
+from Config.Config import Settings
 import logging
 
 logger = logging.getLogger(__name__)
@@ -58,8 +58,8 @@ class RAGManager:
         """Esegue il flusso completo RAG per una query."""
         
         # 1. Retrieval: Cerca i frammenti più rilevanti
-        # Calcolo più robusto per k
-        k = max(3, settings.EMBEDDING_DIMENSION // 100)
+        # Usa la dimensione rilevata automaticamente dal modello
+        k = max(3, self.model.embedding_dimension // 100)
         retrieved_docs = self.model.search_documents(query, k=k)
 
         # 2. Formattazione del Contesto

@@ -15,7 +15,6 @@ class Settings(BaseSettings):
     QDRANT_PORT: str
     QDRANT_COLLECTION_NAME: str
     EMBEDDING_MODEL_NAME: str
-    EMBEDDING_DIMENSION: int
     CHUNK_SIZE: int
     CHUNK_OVERLAP: int
 

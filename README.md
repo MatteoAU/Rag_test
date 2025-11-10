@@ -54,9 +54,9 @@ Dopo l'avvio, devi istruire Ollama a scaricare i modelli che l'applicazione util
 Esegui il download (usa i nomi dei modelli specificati nel tuo .env):
 
 Bash
-
 docker exec -it ollama_server ollama pull llama3
-docker exec -it ollama_server ollama pull nomic-embed-text 
+docker exec -it ollama_server ollama pull nomic-embed-text
+
 Una volta che i download sono completati, il tuo sistema RAG è pronto. L'API è accessibile su http://localhost:8000.
 
 🌐 Altri Metodi di Interazione
@@ -66,12 +66,9 @@ L'interfaccia Swagger UI è disponibile all'indirizzo http://localhost:8000/docs
 Per spegnere e rimuovere tutti i container (lasciando i dati nei volumi per un riavvio rapido):
 
 Bash
-
 docker compose down
+
 Per eliminare anche i volumi di dati persistenti (LLM e Qdrant):
 
 Bash
-
 docker compose down -v
-
----
