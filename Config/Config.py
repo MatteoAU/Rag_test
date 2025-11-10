@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: str = "6333"
     QDRANT_COLLECTION_NAME: str = "rag_ollama_collection"
-    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
-    EMBEDDING_DIMENSION: int = 384
+    EMBEDDING_MODEL_NAME: str = "nomic-embed-text"
+    EMBEDDING_DIMENSION: int = 768
     CHUNK_SIZE: int = 1000
     CHUNK_OVERLAP: int = 200
 
