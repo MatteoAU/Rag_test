@@ -1,4 +1,4 @@
-from qdrant_client import QdrantClient # 👈 Importazione necessaria per il client
+from qdrant_client import QdrantClient
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.llms import Ollama
 from langchain_community.vectorstores import Qdrant
@@ -40,14 +40,14 @@ class RAGModel:
         )
 
     # ... (Metodi save_documents, search_documents, generate Omissi per brevità) ...
-    def save_documents(self, raw_documents: list[Document]):
-        # ...
-        pass
+    # def save_documents(self, raw_documents: list[Document]):
+    #     # ...
+    #     pass
         
-    def search_documents(self, query: str, k: int = 4) -> list[Document]:
-        # ...
-        pass
+    # def search_documents(self, query: str, k: int = 4) -> list[Document]:
+    #     # ...
+    #     pass
 
-    def generate(self, prompt: str) -> str:
-        # ...
-        pass
+    # def generate(self, prompt: str) -> str:
+    #     # ...
+    #     pass
