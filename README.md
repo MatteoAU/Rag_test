@@ -57,6 +57,8 @@ Bash
 docker exec -it ollama_server ollama pull llama3
 docker exec -it ollama_server ollama pull nomic-embed-text
 
+(fare la pull dei modelli che si vuole testare)
+
 Una volta che i download sono completati, il tuo sistema RAG è pronto. L'API è accessibile su http://localhost:8000.
 
 🌐 Altri Metodi di Interazione
