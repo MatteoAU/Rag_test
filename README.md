@@ -37,6 +37,8 @@ Segui questi passaggi per avviare l'intera architettura con un solo comando.
     # Esempio:
     OLLAMA_MODEL_NAME="llama3" 
     EMBEDDING_MODEL_NAME="nomic-embed-text" 
+
+    prendere il file .env_layout.md e coppiarlo nel .env
     
 
 ### 2. Avvio dei Container (Qdrant, Ollama, FastAPI)

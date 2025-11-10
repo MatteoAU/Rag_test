@@ -60,32 +60,6 @@ class HealthResponse(BaseModel):
 
 # --- Endpoint dell'API (Controller) ---
 
-@app.get("/", tags=["Root"])
-async def root():
-    """Endpoint root per verificare che il servizio sia attivo."""
-    return {
-        "message": "RAG API is running",
-        "docs": "/docs",
-        "health": "/health"
-    }
-
-@app.get("/health", response_model=HealthResponse, tags=["Health"])
-async def health_check():
-    """Verifica lo stato di salute dei servizi."""
-    services_status = {
-        "api": "healthy",
-        "rag_manager": "healthy" if rag_manager else "unhealthy"
-    }
-    
-    overall_status = "healthy" if all(
-        s == "healthy" for s in services_status.values()
-    ) else "unhealthy"
-    
-    return {
-        "status": overall_status,
-        "services": services_status
-    }
-
 @app.post("/api/document/index", response_model=StatusResponse, tags=["Indexing"])
 async def index_document(file: UploadFile = File(...)):
     """
