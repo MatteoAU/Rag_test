@@ -1,10 +1,10 @@
 fastapi
 uvicorn[standard]
 
-langchain
-langchain-community
+langchain>=0.1.0
+langchain-community>=0.0.20
 
-qdrant-client
+qdrant-client==1.7.3
 
 pypdf
 python-docx

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from RAG.RagManager import RAGManager
@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 # --- Setup ---
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Sistema RAG con Ollama, Qdrant e FastAPI",
-    version="1.0.0"
+    description="Sistema RAG Multi-Database con Ollama, Qdrant e FastAPI",
+    version="2.0.0"
 )
 
 # CORS Configuration
@@ -46,6 +46,7 @@ except Exception as e:
 # --- Modelli Pydantic per l'API ---
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, description="Query da inviare al sistema RAG")
+    db_hash: str = Field(..., min_length=1, description="Hash del database da interrogare")
 
 class QueryResponse(BaseModel):
     response: str = Field(..., description="Risposta generata dal sistema RAG")
@@ -54,26 +55,114 @@ class StatusResponse(BaseModel):
     status: str = Field(..., description="Stato dell'operazione")
     message: str = Field(..., description="Messaggio descrittivo")
 
-class HealthResponse(BaseModel):
+class CreateDatabaseRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50, description="Nome del database")
+
+class CreateDatabaseResponse(BaseModel):
     status: str
-    services: dict
+    message: str
+    db_hash: str
+    db_name: str
+    collection_name: str
+
+class DatabaseInfo(BaseModel):
+    name: str
+    hash: str
+    collection_name: str
+    created_at: str
+    document_count: int
+
+class ListDatabasesResponse(BaseModel):
+    databases: list[DatabaseInfo]
 
 # --- Endpoint dell'API (Controller) ---
 
-@app.post("/api/document/index", response_model=StatusResponse, tags=["Indexing"])
-async def index_document(file: UploadFile = File(...)):
+# ======== DATABASE MANAGEMENT ENDPOINTS ========
+
+@app.post("/database/create", response_model=CreateDatabaseResponse, tags=["Database Management"])
+async def create_database(request: CreateDatabaseRequest):
     """
-    Carica un documento, lo suddivide in chunks, vettorizza e lo salva in Qdrant.
+    Crea un nuovo database vettoriale e restituisce l'hash univoco per identificarlo.
     """
+    if not rag_manager:
+        raise HTTPException(status_code=503, detail="RAG Manager non disponibile")
     
+    try:
+        db_info = rag_manager.create_database(request.name)
+        return {
+            "status": "success",
+            "message": f"Database '{request.name}' creato con successo",
+            "db_hash": db_info['hash'],
+            "db_name": db_info['name'],
+            "collection_name": db_info['collection_name']
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Errore nella creazione del database: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Errore interno: {str(e)}")
+
+@app.get("/database/list", response_model=ListDatabasesResponse, tags=["Database Management"])
+async def list_databases():
+    """
+    Restituisce la lista di tutti i database registrati.
+    """
+    if not rag_manager:
+        raise HTTPException(status_code=503, detail="RAG Manager non disponibile")
+    
+    try:
+        databases = rag_manager.list_databases()
+        return {"databases": databases}
+    except Exception as e:
+        logger.error(f"Errore nel recupero della lista database: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Errore interno: {str(e)}")
+
+@app.delete("/database/{db_hash}", response_model=StatusResponse, tags=["Database Management"])
+async def delete_database(db_hash: str):
+    """
+    Elimina un database specifico utilizzando il suo hash.
+    """
+    if not rag_manager:
+        raise HTTPException(status_code=503, detail="RAG Manager non disponibile")
+    
+    try:
+        rag_manager.delete_database(db_hash)
+        return {
+            "status": "success",
+            "message": f"Database con hash '{db_hash}' eliminato con successo"
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Errore nell'eliminazione del database: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Errore interno: {str(e)}")
+
+# ======== DOCUMENT INDEXING ENDPOINT ========
+
+@app.post("/document/upload", response_model=StatusResponse, tags=["Document Indexing"])
+async def index_document(
+    file: UploadFile = File(...),
+    db_hash: str = Form(..., description="Hash del database di destinazione")
+):
+    """
+    Carica un documento in un database specifico.
+    Richiede il db_hash del database target.
+    """
     if not rag_manager:
         raise HTTPException(
             status_code=503, 
             detail="RAG Manager non disponibile. Verificare i servizi e i log di startup."
         )
     
+    # Valida che il database esista
+    if not rag_manager.registry.database_exists(db_hash):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Database con hash '{db_hash}' non trovato. Creare prima il database."
+        )
+    
     # Validazione estensione file
-    allowed_extensions = {'.pdf', '.txt', '.md', '.csv'} # Aggiungi estensioni se supportate dal Manager
+    allowed_extensions = {'.pdf', '.txt', '.md', '.csv'}
     file_extension = Path(file.filename).suffix.lower()
     
     if file_extension not in allowed_extensions:
@@ -83,10 +172,7 @@ async def index_document(file: UploadFile = File(...)):
                    f"Formati accettati: {', '.join(allowed_extensions)}"
         )
     
-    # Usa le settings per la dimensione massima se le hai definite nel file .env
-    # Altrimenti, usa un default.
     MAX_FILE_SIZE = getattr(settings, 'MAX_FILE_SIZE_MB', 50) * 1024 * 1024 
-    
     temp_file_path = TEMP_UPLOAD_DIR / f"temp_{Path(file.filename).name}"
     
     try:
@@ -95,9 +181,9 @@ async def index_document(file: UploadFile = File(...)):
         
         with open(temp_file_path, "wb") as buffer:
             while True:
-                chunk = await file.read(8192) # Leggi in chunk asincroni
+                chunk = await file.read(8192)
                 if not chunk:
-                    break  # Fine del file
+                    break
                 
                 file_size += len(chunk)
                 
@@ -111,27 +197,25 @@ async def index_document(file: UploadFile = File(...)):
         
         logger.info(f"File salvato: {file.filename} ({file_size / (1024*1024):.2f} MB). Avvio indicizzazione...")
         
-        # Chiama il Manager per l'indicizzazione
-        # Il manager userà il percorso del file temporaneo
-        rag_manager.index_file(str(temp_file_path))
+        # Chiama il Manager per l'indicizzazione nel database specifico
+        chunks_count = rag_manager.index_file(str(temp_file_path), db_hash)
         
         return {
             "status": "success",
-            "message": f"File '{file.filename}' indicizzato con successo in Qdrant."
+            "message": f"File '{file.filename}' indicizzato con successo ({chunks_count} chunks)."
         }
         
     except HTTPException:
-        # Rilancia le eccezioni HTTP che hai sollevato (es. 400, 413)
         raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Errore durante l'indicizzazione: {e}", exc_info=True)
-        # Se l'errore è dovuto a un problema interno (es. LLM, Qdrant), lancia 500
         raise HTTPException(
             status_code=500,
             detail=f"Errore durante l'elaborazione del file: {str(e)}"
         )
     finally:
-        # Pulisci il file temporaneo ASSOLUTAMENTE SEMPRE
         if temp_file_path.exists():
             try:
                 temp_file_path.unlink()
@@ -139,25 +223,33 @@ async def index_document(file: UploadFile = File(...)):
             except Exception as e:
                 logger.warning(f"Impossibile eliminare il file temporaneo: {e}")
 
-@app.post("/api/query", response_model=QueryResponse, tags=["Query"])
+# ======== QUERY ENDPOINT ========
+
+@app.post("/query", response_model=QueryResponse, tags=["Query"])
 async def rag_query(request: QueryRequest):
     """
-    Esegue una query RAG e restituisce la risposta dell'LLM.
-    
-    Il sistema cerca i documenti più rilevanti nel database vettoriale
-    e genera una risposta basata sul contesto trovato.
+    Esegue una query RAG su un database specifico.
+    Richiede il db_hash del database da interrogare.
     """
-    
     if not rag_manager:
         raise HTTPException(
             status_code=503,
             detail="RAG Manager non disponibile. Verificare i servizi."
         )
     
+    # Valida che il database esista
+    if not rag_manager.registry.database_exists(request.db_hash):
+        raise HTTPException(
+            status_code=404,
+            detail=f"Database con hash '{request.db_hash}' non trovato."
+        )
+    
     try:
-        logger.info(f"Query ricevuta: {request.query}")
-        response = rag_manager.get_rag_response(request.query)
+        logger.info(f"Query ricevuta per db {request.db_hash}: {request.query}")
+        response = rag_manager.get_rag_response(request.query, request.db_hash)
         return {"response": response}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Errore durante l'elaborazione della query: {e}", exc_info=True)
         raise HTTPException(

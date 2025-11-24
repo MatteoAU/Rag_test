@@ -14,6 +14,22 @@ __pycache__/
 
 __pycache__/
 *.pyc
+venv/
+*.venv/
+env/
+.env
+*.env
+__pycache__/
+*.pyc
+.ipynb_checkpoints
+
+
+.env
+*.log
+*.key
+
+__pycache__/
+*.pyc
 .venv
 venv/
 env/
@@ -23,5 +39,8 @@ env/
 qdrant_data/
 ollama_models/
 docker-compose.override.yml # Utile se usi un override locale
+
+# Database registry (file di mappatura db_name -> db_hash)
+db_registry.json
 
 /temp_*.*
