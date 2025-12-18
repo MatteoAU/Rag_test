@@ -1,0 +1,91 @@
+from pydantic import BaseModel
+from datetime import datetime, timedelta
+import jwt
+from fastapi import Depends, HTTPException, Request, FastAPI
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from Utils.Config.config import Config
+from Utils.Logger.security_logger import log_security_event, SecurityEventType
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+
+# Configurazione logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
+
+# Setup CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Consente richieste da qualsiasi dominio (anche esterno), QUANDO PUB CHECK 
+    allow_credentials=True, # Abilita l'invio di cookie/header di autenticazione
+    allow_methods=["*"], # Permette tutti i metodi HTTP (GET, POST, DELETE, ecc.)
+    allow_headers=["*"], # Autorizza tutti gli header nelle richieste (inclusi custom)
+)
+
+security = HTTPBearer()
+
+class TokenRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+
+@app.post("/token/", response_model=TokenResponse)
+async def generate_token(request: Request, token_request: TokenRequest):
+    if token_request.username == Config.USER and token_request.password == Config.PASS:
+        expiration = datetime.utcnow() + timedelta(hours=Config.JWT_EXPIRATION)
+        
+        payload = {
+            "sub": token_request.username,
+            "exp": expiration
+        }
+        
+        token = jwt.encode(payload, Config.JWT_SECRET, algorithm=Config.JWT_ALGORITHM)
+        
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            expires_in=Config.JWT_EXPIRATION * 3600
+        )
+    else:
+        log_security_event(
+            request=request,
+            event_type=SecurityEventType.LOGIN_FAILURE,
+            user=token_request.username,
+            status="warning",
+            details=f"Tentativo di login fallito per l'utente {token_request.username}"
+        )
+        raise HTTPException(status_code=401, detail="Credenziali non valide")
+    
+# Funzione per verificare il token JWT
+def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials, Config.JWT_SECRET, algorithms=[Config.JWT_ALGORITHM])
+        # Log del token valido
+        log_security_event(
+            request=request,
+            event_type=SecurityEventType.TOKEN_CREATION,
+            user=payload.get("sub", "unknown"),
+            details="Token JWT valido"
+        )
+        return payload
+    except jwt.ExpiredSignatureError:
+        log_security_event(
+            request=request,
+            event_type=SecurityEventType.UNAUTHORIZED_ACCESS,
+            status="warning",
+            details="Tentativo di accesso con token scaduto"
+        )
+        raise HTTPException(status_code=401, detail="Token scaduto")
+    except jwt.InvalidTokenError:
+        log_security_event(
+            request=request,
+            event_type=SecurityEventType.UNAUTHORIZED_ACCESS,
+            status="warning",
+            details="Tentativo di accesso con token non valido"
+        )
+        raise HTTPException(status_code=401, detail="Token non valido")
