@@ -1,0 +1,8 @@
+/* App specific styles can go here if needed to override globals */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  width: 100%;
+  overflow: hidden;
+}

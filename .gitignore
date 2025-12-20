@@ -1,7 +1,31 @@
-Log
-.venv
-.env
+# IDEs & System
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.venv/
+.env
 
-/Utils/logs
+# Frontend (Node.js/Vite)
+node_modules/
+dist/
+build/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.local
+
+# Logs
+/Utils/logs/
+*.log
+
+# Docker Data (if any)
+qdrant_data/
+ollama_data/
