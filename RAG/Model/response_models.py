@@ -42,3 +42,22 @@ class DeleteVectorDBResponse(BaseModel):
     status: str
     message: str
 
+
+class DocumentMatch(BaseModel):
+    """Singolo documento trovato dalla ricerca"""
+    text: str
+    score: float
+    filename: str
+    chunk_index: int
+
+
+class QueryResponse(BaseModel):
+    """Response model per query RAG"""
+    db_hash: str
+    query: str
+    answer: str
+    sources: List[DocumentMatch]
+    status: str
+    message: Optional[str] = None
+
+

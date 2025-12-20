@@ -12,7 +12,9 @@ from RAG.Model.response_models import (
     UploadFileResponse, 
     ListVectorDBResponse, 
     DeleteVectorDBResponse,
-    VectorDBInfo
+    VectorDBInfo,
+    QueryResponse,
+    DocumentMatch
 )
 
 def generate_db_hash() -> str:
@@ -142,5 +144,28 @@ class RagManager:
             status="success",
             message=f"Vector DB '{db_hash}' eliminato con successo."
         )
+    
+    async def query_vector_db(self, db_hash: str, query: str, top_k: int = 5) -> QueryResponse:
+        """
+        Esegue query RAG sul database vettoriale.
+        Delega la logica completa a QueryProcessor.
+        
+        Args:
+            db_hash: Hash del database vettoriale
+            query: Query testuale dell'utente
+            top_k: Numero di documenti da recuperare
+        
+        Returns:
+            QueryResponse con risposta e fonti
+        """
+        from RAG.Manager.query_processor import QueryProcessor
+        
+        processor = QueryProcessor(
+            qdrant_client=self.model.qdrant,
+            ollama_client=self.model.ollama
+        )
+        
+        return await processor.execute_query(db_hash, query, top_k)
+
 
 

@@ -45,6 +45,28 @@ class OllamaConnection:
         # Genera un embedding di test per determinare la dimensione
         test_embedding = self.get_embeddings("test")
         return len(test_embedding)
+    
+    def generate_chat_response(self, messages: List[dict], model: str) -> str:
+        """
+        Genera risposta usando LLM chat.
+        
+        Args:
+            messages: Lista di messaggi formato OpenAI [{"role": "...", "content": "..."}]
+            model: Nome del modello da usare
+        
+        Returns:
+            Risposta del modello
+        """
+        response = self._client.post(
+            f"{self.base_url}/api/chat",
+            json={
+                "model": model,
+                "messages": messages,
+                "stream": False
+            }
+        )
+        response.raise_for_status()
+        return response.json()["message"]["content"]
 
 
 class QdrantConnection:
@@ -166,6 +188,52 @@ class QdrantConnection:
             return True
         except Exception:
             return False
+    
+    def search(
+        self, 
+        collection_name: str, 
+        query_vector: List[float], 
+        limit: int = 5
+    ) -> List[dict]:
+        """
+        Ricerca per similarità nel database vettoriale.
+        
+        Args:
+            collection_name: Nome della collection
+            query_vector: Vettore della query
+            limit: Numero massimo di risultati
+        
+        Returns:
+            Lista di dict con score, payload, id
+        """
+        try:
+            print(f"DEBUG: Searching in collection '{collection_name}' with limit={limit}")
+            print(f"DEBUG: Query vector length: {len(query_vector)}")
+            
+            # Usa query_points invece di search (API corretta di Qdrant)
+            search_result = self.client.query_points(
+                collection_name=collection_name,
+                query=query_vector,
+                limit=limit
+            )
+            
+            print(f"DEBUG: Search returned {len(search_result.points)} results")
+            
+            results = []
+            for hit in search_result.points:
+                print(f"DEBUG: Hit score={hit.score}, id={hit.id}")
+                results.append({
+                    "id": hit.id,
+                    "score": hit.score,
+                    "payload": hit.payload
+                })
+            
+            return results
+        except Exception as e:
+            print(f"ERROR in search: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
 
 
 class RagModel:

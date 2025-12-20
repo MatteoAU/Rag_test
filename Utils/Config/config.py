@@ -37,6 +37,7 @@ class AppConfig:
     # Ollama
     OLLAMA_BASE_URL: str
     OLLAMA_EMBEDDING_MODEL: str
+    OLLAMA_CHAT_MODEL: str
 
     # Debug
     DEBUG: bool = False

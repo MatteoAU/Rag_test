@@ -11,7 +11,8 @@ from RAG.Model.response_models import (
     CreateVectorDBResponse, 
     UploadFileResponse, 
     ListVectorDBResponse, 
-    DeleteVectorDBResponse
+    DeleteVectorDBResponse,
+    QueryResponse
 )
 
 app = FastAPI()
@@ -311,6 +312,57 @@ async def delete_vector_db(
     
     if result.status == "error":
         raise HTTPException(status_code=404, detail=result.message)
+    
+    return result
+
+
+@app.post("/query/", response_model=QueryResponse)
+async def query_vector_db(
+    request: Request,
+    db_hash: str = Form(...),
+    query: str = Form(...),
+    top_k: int = Form(5),
+    token: dict = Depends(verify_token)
+):
+    """
+    Esegue query RAG sul database vettoriale.
+    
+    Richiede autenticazione JWT.
+    
+    Args:
+        db_hash: Hash del database vettoriale
+        query: Domanda dell'utente
+        top_k: Numero di documenti da recuperare (default: 5)
+    
+    Returns:
+        QueryResponse con risposta generata e documenti fonte
+    """
+    user = token.get("sub", "unknown")
+    
+    # Log inizio operazione
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info",
+        details=f"Query on DB '{db_hash}': {query[:100]}"  # Limita lunghezza query nel log
+    )
+    
+    # Esegui query RAG
+    manager = get_rag_manager()
+    result = await manager.query_vector_db(db_hash, query, top_k)
+    
+    # Log risultato
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info" if result.status == "success" else "warning",
+        details=f"Query result: {result.status} - Found {len(result.sources)} sources"
+    )
+    
+    if result.status == "error":
+        raise HTTPException(status_code=400, detail=result.message or "Errore durante la query")
     
     return result
 
