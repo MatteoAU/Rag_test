@@ -1,5 +1,21 @@
 const API_URL = ''; // Proxied by Vite
 
+const handleResponse = async (response) => {
+    if (!response.ok) {
+        let errorMessage = 'An error occurred';
+        try {
+            const error = await response.json();
+            errorMessage = error.detail || errorMessage;
+        } catch (e) {
+            // response was not json
+        }
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
+    }
+    return response.json();
+};
+
 export const api = {
     login: async (username, password) => {
         // Note: Backend endpoint is /token/ (trailing slash might be needed)
@@ -11,19 +27,14 @@ export const api = {
             },
             body: JSON.stringify({ username, password }),
         });
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Login failed');
-        }
-        return response.json();
+        return handleResponse(response);
     },
 
     getVectors: async (token) => {
         const response = await fetch(`${API_URL}/list_vectorDBs/`, {
             headers: { Authorization: `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error('Failed to fetch DBs');
-        return response.json();
+        return handleResponse(response);
     },
 
     createDB: async (token) => {
@@ -31,8 +42,7 @@ export const api = {
             method: 'POST',
             headers: { Authorization: `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error('Failed to create DB');
-        return response.json();
+        return handleResponse(response);
     },
 
     deleteDB: async (token, dbHash) => {
@@ -40,8 +50,7 @@ export const api = {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` }
         });
-        if (!response.ok) throw new Error('Failed to delete DB');
-        return response.json();
+        return handleResponse(response);
     },
 
     uploadFile: async (token, dbHash, file) => {
@@ -54,8 +63,7 @@ export const api = {
             headers: { Authorization: `Bearer ${token}` },
             body: formData
         });
-        if (!response.ok) throw new Error('Upload failed');
-        return response.json();
+        return handleResponse(response);
     },
 
     query: async (token, dbHash, queryText) => {
@@ -69,7 +77,6 @@ export const api = {
             headers: { Authorization: `Bearer ${token}` },
             body: formData
         });
-        if (!response.ok) throw new Error('Query failed');
-        return response.json();
+        return handleResponse(response);
     }
 };

@@ -8,7 +8,7 @@ echo ==========================================
 echo.
 
 :: 1. Start Docker Containers
-echo [1/4] Starting Database Services (Qdrant & Ollama)...
+echo [1/4] Starting Database Services (Qdrant ^& Ollama)...
 docker-compose up -d
 IF %ERRORLEVEL% NEQ 0 (
     echo Error starting Docker containers. Make sure Docker Desktop is running.
@@ -16,6 +16,13 @@ IF %ERRORLEVEL% NEQ 0 (
     exit /b
 )
 echo Services started.
+
+echo [1.5/4] Ensuring AI Models are ready (this might take a while on first run)...
+echo Pulling embedding model (nomic-embed-text)...
+docker exec rag_ollama ollama pull nomic-embed-text
+echo Pulling chat model (llama3.2)...
+docker exec rag_ollama ollama pull llama3.2
+echo Models ready.
 echo.
 
 :: 2. Start Backend
@@ -39,7 +46,7 @@ timeout /t 5 >nul
 start http://localhost:5173
 
 echo.
-echoString System is running!
+echo System is running!
 echo Backend: http://127.0.0.1:8000/docs
 echo Frontend: http://localhost:5173
 echo.

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChatInterface } from './ChatInterface';
 import { api } from '../services/api';
 
-export function Dashboard({ token }) {
+export function Dashboard({ token, onLogout }) {
     const [dbs, setDbs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [creating, setCreating] = useState(false);
@@ -21,6 +21,9 @@ export function Dashboard({ token }) {
             setDbs(data.databases || []);
         } catch (err) {
             console.error(err);
+            if (err.status === 401 && onLogout) {
+                onLogout();
+            }
         } finally {
             setLoading(false);
         }
@@ -32,7 +35,12 @@ export function Dashboard({ token }) {
             await api.createDB(token);
             await loadDbs();
         } catch (err) {
-            alert('Failed to create DB');
+            console.error(err);
+            if (err.status === 401 && onLogout) {
+                onLogout();
+            } else {
+                alert('Failed to create DB');
+            }
         } finally {
             setCreating(false);
         }
@@ -45,7 +53,12 @@ export function Dashboard({ token }) {
             if (selectedDb === dbHash) setSelectedDb(null);
             await loadDbs();
         } catch (err) {
-            alert('Failed to delete DB');
+            console.error(err);
+            if (err.status === 401 && onLogout) {
+                onLogout();
+            } else {
+                alert('Failed to delete DB');
+            }
         }
     };
 
@@ -61,7 +74,12 @@ export function Dashboard({ token }) {
             await loadDbs(); // refresh counts
             setFile(null);
         } catch (err) {
-            setMessage({ type: 'error', text: 'Upload failed' });
+            console.error(err);
+            if (err.status === 401 && onLogout) {
+                onLogout();
+            } else {
+                setMessage({ type: 'error', text: 'Upload failed' });
+            }
         } finally {
             setUploading(false);
         }
