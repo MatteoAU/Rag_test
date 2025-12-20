@@ -16,16 +16,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-if not exist ".venv" (
-    echo    - Creating virtual environment...
-    python -m venv .venv
+if not exist "RAG\.venv" (
+    echo    - Creating virtual environment in RAG directory...
+    python -m venv RAG\.venv
 ) else (
-    echo    - Virtual environment found.
+    echo    - Virtual environment found in RAG directory.
 )
 
 echo    - Installing requirements...
 :: Activate venv and install
-call .venv\Scripts\activate
+call RAG\.venv\Scripts\activate
 pip install -r requirements.txt
 if %errorlevel% neq 0 (
     echo Error: Failed to install Python requirements.

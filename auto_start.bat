@@ -27,7 +27,7 @@ echo.
 
 :: 2. Start Backend
 echo [2/4] Starting Backend (FastAPI)...
-start "RAG Backend" cmd /k "call .venv\Scripts\activate && uvicorn RAG.Controller.controller:app --reload"
+start "RAG Backend" cmd /k "call RAG\.venv\Scripts\activate && uvicorn RAG.Controller.controller:app --reload"
 echo Backend launched in new window.
 echo.
 
