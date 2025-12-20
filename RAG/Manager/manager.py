@@ -7,7 +7,13 @@ from fastapi import UploadFile
 import uuid
 import hashlib
 from datetime import datetime
-from RAG.Model.response_models import CreateVectorDBResponse, UploadFileResponse
+from RAG.Model.response_models import (
+    CreateVectorDBResponse, 
+    UploadFileResponse, 
+    ListVectorDBResponse, 
+    DeleteVectorDBResponse,
+    VectorDBInfo
+)
 
 def generate_db_hash() -> str:
     """
@@ -77,4 +83,64 @@ class RagManager:
             status="success",
             message=f"Vector DB '{db_hash}' creato con successo. Pronto per ricevere documenti."
         )
+    
+    def list_vector_dbs(self) -> ListVectorDBResponse:
+        """
+        Lista tutti i database vettoriali.
+        
+        Returns:
+            ListVectorDBResponse con lista dei database e conteggio
+        """
+        # Ottieni lista collections da Qdrant
+        collections = self.model.qdrant.list_collections()
+        
+        # Converti in VectorDBInfo
+        databases = [
+            VectorDBInfo(
+                db_hash=col["name"],
+                vectors_count=col["vectors_count"]
+            )
+            for col in collections
+        ]
+        
+        return ListVectorDBResponse(
+            status="success",
+            databases=databases,
+            total_count=len(databases)
+        )
+    
+    def delete_vector_db(self, db_hash: str) -> DeleteVectorDBResponse:
+        """
+        Elimina un database vettoriale.
+        
+        Args:
+            db_hash: Hash del database da eliminare
+        
+        Returns:
+            DeleteVectorDBResponse con stato dell'operazione
+        """
+        # Verifica che la collection esista
+        if not self.model.qdrant.collection_exists(db_hash):
+            return DeleteVectorDBResponse(
+                db_hash=db_hash,
+                status="error",
+                message=f"Vector DB '{db_hash}' non trovato."
+            )
+        
+        # Elimina la collection
+        success = self.model.qdrant.delete_collection(db_hash)
+        
+        if not success:
+            return DeleteVectorDBResponse(
+                db_hash=db_hash,
+                status="error",
+                message=f"Errore nell'eliminazione del Vector DB '{db_hash}'."
+            )
+        
+        return DeleteVectorDBResponse(
+            db_hash=db_hash,
+            status="success",
+            message=f"Vector DB '{db_hash}' eliminato con successo."
+        )
+
 

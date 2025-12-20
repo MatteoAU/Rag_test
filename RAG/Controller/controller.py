@@ -7,7 +7,12 @@ from Utils.Config.config import Config
 from Utils.Logger.security_logger import log_security_event, SecurityEventType
 from fastapi.middleware.cors import CORSMiddleware
 from RAG.Manager.manager import RagManager
-from RAG.Model.response_models import CreateVectorDBResponse, UploadFileResponse
+from RAG.Model.response_models import (
+    CreateVectorDBResponse, 
+    UploadFileResponse, 
+    ListVectorDBResponse, 
+    DeleteVectorDBResponse
+)
 
 app = FastAPI()
 
@@ -218,6 +223,94 @@ async def upload_file(
     
     if result.status == "error":
         raise HTTPException(status_code=400, detail=result.message)
+    
+    return result
+
+
+@app.get("/list_vectorDBs/", response_model=ListVectorDBResponse)
+async def list_vector_dbs(
+    request: Request,
+    token: dict = Depends(verify_token)
+):
+    """
+    Lista tutti i database vettoriali creati.
+    
+    Richiede autenticazione JWT.
+    Non richiede parametri.
+    
+    Returns:
+        ListVectorDBResponse con lista di tutti i database e conteggio totale
+    """
+    user = token.get("sub", "unknown")
+    
+    # Log inizio operazione
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info",
+        details="List all vector databases"
+    )
+    
+    # Ottieni lista database
+    manager = get_rag_manager()
+    result = manager.list_vector_dbs()
+    
+    # Log risultato
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info",
+        details=f"Found {result.total_count} vector databases"
+    )
+    
+    return result
+
+
+@app.delete("/delete_vectorDB/", response_model=DeleteVectorDBResponse)
+async def delete_vector_db(
+    request: Request,
+    db_hash: str,
+    token: dict = Depends(verify_token)
+):
+    """
+    Elimina un database vettoriale specifico.
+    
+    Richiede autenticazione JWT.
+    
+    Args:
+        db_hash: Hash del database da eliminare (query parameter)
+    
+    Returns:
+        DeleteVectorDBResponse con stato dell'operazione
+    """
+    user = token.get("sub", "unknown")
+    
+    # Log inizio operazione
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info",
+        details=f"Delete vector DB '{db_hash}'"
+    )
+    
+    # Elimina database
+    manager = get_rag_manager()
+    result = manager.delete_vector_db(db_hash)
+    
+    # Log risultato
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=user,
+        status="info" if result.status == "success" else "warning",
+        details=f"Delete result: {result.status} - {result.message}"
+    )
+    
+    if result.status == "error":
+        raise HTTPException(status_code=404, detail=result.message)
     
     return result
 

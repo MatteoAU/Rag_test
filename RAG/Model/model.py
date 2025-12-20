@@ -120,6 +120,52 @@ class QdrantConnection:
             return True
         except Exception:
             return False
+    
+    def list_collections(self) -> List[dict]:
+        """
+        Restituisce la lista di tutte le collections con informazioni dettagliate.
+        
+        Returns:
+            Lista di dict con name, vectors_count
+        """
+        try:
+            collections_response = self.client.get_collections()
+            result = []
+            
+            for collection in collections_response.collections:
+                # Ottieni info dettagliate sulla collection
+                try:
+                    collection_info = self.client.get_collection(collection.name)
+                    result.append({
+                        "name": collection.name,
+                        "vectors_count": collection_info.points_count
+                    })
+                except Exception:
+                    # Se non riusciamo a ottenere info dettagliate, aggiungiamo solo il nome
+                    result.append({
+                        "name": collection.name,
+                        "vectors_count": 0
+                    })
+            
+            return result
+        except Exception:
+            return []
+    
+    def delete_collection(self, collection_name: str) -> bool:
+        """
+        Elimina una collection.
+        
+        Args:
+            collection_name: Nome della collection da eliminare
+        
+        Returns:
+            True se successo, False altrimenti
+        """
+        try:
+            self.client.delete_collection(collection_name=collection_name)
+            return True
+        except Exception:
+            return False
 
 
 class RagModel:
