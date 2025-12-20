@@ -30,6 +30,14 @@ class AppConfig:
     USER: str
     PASS: str
 
+    # Qdrant
+    QDRANT_HOST: str
+    QDRANT_PORT: int
+
+    # Ollama
+    OLLAMA_BASE_URL: str
+    OLLAMA_EMBEDDING_MODEL: str
+
     # Debug
     DEBUG: bool = False
 

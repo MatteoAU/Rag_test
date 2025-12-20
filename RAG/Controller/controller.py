@@ -6,6 +6,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from Utils.Config.config import Config
 from Utils.Logger.security_logger import log_security_event, SecurityEventType
 from fastapi.middleware.cors import CORSMiddleware
+from RAG.Manager.manager import RagManager, CreateVectorDBResponse
 
 app = FastAPI()
 
@@ -104,3 +105,81 @@ def test(request: Request, creds = Depends(security)):  # ← Aggiungi Request
         details="Accesso all'endpoint /test"
     )
     return {"token": creds.credentials}
+
+
+# ============= RAG Endpoints =============
+
+# Manager singleton
+_rag_manager = None
+
+def get_rag_manager() -> RagManager:
+    """Lazy initialization del RagManager"""
+    global _rag_manager
+    if _rag_manager is None:
+        _rag_manager = RagManager()
+    return _rag_manager
+
+
+@app.post("/create_vectorDB/", response_model=CreateVectorDBResponse)
+async def create_vector_db(
+    request: Request,
+    token: dict = Depends(verify_token)
+):
+    """
+    Crea un database vettoriale vuoto.
+    Genera automaticamente un hash unico per identificare il database.
+    
+    Richiede autenticazione JWT.
+    Ritorna il db_hash univoco da usare per caricare documenti successivamente.
+    """
+    # Log dell'operazione
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=token.get("sub", "unknown"),
+        status="info",
+        details="Creazione nuovo vector DB"
+    )
+    
+    manager = get_rag_manager()
+    result = await manager.create_vector_db()
+    
+    # Log del risultato
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.DATABASE_OPERATION,
+        user=token.get("sub", "unknown"),
+        status="info" if result.status == "success" else "warning",
+        details=f"Vector DB creation result: {result.status} - {result.message}"
+    )
+    
+    if result.status == "error":
+        raise HTTPException(status_code=400, detail=result.message)
+    
+    return result
+
+
+@app.get("/health/")
+async def health_check(request: Request):
+    """
+    Verifica lo stato dei servizi (Qdrant, Ollama).
+    Endpoint pubblico per monitoring.
+    """
+    manager = get_rag_manager()
+    health = manager.model.health_check()
+    
+    all_healthy = all(health.values())
+    
+    # Log dell'health check
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.API_REQUEST,
+        user="system",
+        status="info" if all_healthy else "warning",
+        details=f"Health check - Qdrant: {health['qdrant']}, Ollama: {health['ollama']}"
+    )
+    
+    return {
+        "status": "healthy" if all_healthy else "degraded",
+        "services": health
+    }
