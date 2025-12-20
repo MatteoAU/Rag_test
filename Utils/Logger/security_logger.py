@@ -31,16 +31,30 @@ def sanitize_log_string(text: str) -> str:
     return cleaned
 
 # Configurazione logging
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_DIR / "api_security.log", encoding='utf-8', errors='replace'),
-        logging.StreamHandler()
-    ]
-)
 security_logger = logging.getLogger("security")
+security_logger.setLevel(logging.INFO)
+
+# Rimuovi handler esistenti per evitare duplicati
+for handler in security_logger.handlers[:]:
+    security_logger.removeHandler(handler)
+
+# Crea formattatore
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# FileHandler
+file_handler = logging.FileHandler(LOG_DIR / "api_security.log", encoding='utf-8', errors='replace')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+security_logger.addHandler(file_handler)
+
+# StreamHandler (console)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(formatter)
+security_logger.addHandler(stream_handler)
+
+# Impedisci propagazione al logger root
+security_logger.propagate = False
 class SecurityEventType:
     """Tipi di eventi di sicurezza"""
     LOGIN_SUCCESS = "LOGIN_SUCCESS"

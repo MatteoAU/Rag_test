@@ -6,11 +6,6 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from Utils.Config.config import Config
 from Utils.Logger.security_logger import log_security_event, SecurityEventType
 from fastapi.middleware.cors import CORSMiddleware
-import logging
-
-# Configurazione logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -45,6 +40,15 @@ async def generate_token(request: Request, token_request: TokenRequest):
         }
         
         token = jwt.encode(payload, Config.JWT_SECRET, algorithm=Config.JWT_ALGORITHM)
+        
+        # Log di login riuscito
+        log_security_event(
+            request=request,
+            event_type=SecurityEventType.LOGIN_SUCCESS,
+            user=token_request.username,
+            status="info",
+            details=f"Login riuscito per l'utente {token_request.username}"
+        )
         
         return TokenResponse(
             access_token=token,
@@ -89,3 +93,14 @@ def verify_token(request: Request, credentials: HTTPAuthorizationCredentials = D
             details="Tentativo di accesso con token non valido"
         )
         raise HTTPException(status_code=401, detail="Token non valido")
+    
+@app.get("/test")
+def test(request: Request, creds = Depends(security)):  # ← Aggiungi Request
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.API_REQUEST,
+        user=request.headers.get("Authorization", "unknown"),
+        status="info",
+        details="Accesso all'endpoint /test"
+    )
+    return {"token": creds.credentials}
