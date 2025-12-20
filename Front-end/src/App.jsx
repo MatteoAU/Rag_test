@@ -5,44 +5,23 @@ import { api } from './services/api'
 import './App.css'
 
 function App() {
-  const [token, setToken] = useState(() => localStorage.getItem('access_token'))
-  const [loading, setLoading] = useState(() => !!localStorage.getItem('access_token'))
+  // Token stored only in memory - requires login on every app open
+  const [token, setToken] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
+  // Clear any old tokens from localStorage on mount
   useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
-    const verify = async () => {
-      try {
-        await api.getVectors(token);
-        setLoading(false);
-      } catch (e) {
-        console.error("Token verification failed:", e);
-        // Only logout on 401, otherwise might be network error
-        if (e.status === 401) {
-          localStorage.removeItem('access_token');
-          setToken(null);
-        }
-        // If network error, we still allow Dashboard to try rendering (it handles its own errors)
-        setLoading(false);
-      }
-    };
-    verify();
-  }, [token]);
+    localStorage.removeItem('access_token');
+  }, []);
 
   const handleLogin = (accessToken) => {
-    localStorage.setItem('access_token', accessToken);
+    // Token is only stored in memory, not persisted
     setToken(accessToken);
-    setLoading(false);
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token');
     setToken(null);
-    setLoading(false);
   }
 
   if (error) {
