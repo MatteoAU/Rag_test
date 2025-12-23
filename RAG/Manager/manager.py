@@ -166,6 +166,22 @@ class RagManager:
         )
         
         return await processor.execute_query(db_hash, query, top_k)
+    
+    async def warmup_llm(self) -> dict:
+        """
+        Pre-carica i modelli LLM (embedding e chat) per ridurre la latenza della prima query.
+        Delega la logica completa a WarmupProcessor.
+        
+        Returns:
+            dict con stato del warmup per ogni modello
+        """
+        from RAG.Manager.warmup_processor import WarmupProcessor
+        
+        processor = WarmupProcessor(
+            ollama_client=self.model.ollama
+        )
+        
+        return await processor.execute_warmup()
 
 
 

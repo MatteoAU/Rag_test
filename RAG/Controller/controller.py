@@ -12,7 +12,8 @@ from RAG.Model.response_models import (
     UploadFileResponse, 
     ListVectorDBResponse, 
     DeleteVectorDBResponse,
-    QueryResponse
+    QueryResponse,
+    WarmupResponse
 )
 
 app = FastAPI()
@@ -363,6 +364,47 @@ async def query_vector_db(
     
     if result.status == "error":
         raise HTTPException(status_code=400, detail=result.message or "Errore durante la query")
+    
+    return result
+
+
+@app.post("/warmup/", response_model=WarmupResponse)
+async def warmup_llm(
+    request: Request,
+    token: dict = Depends(verify_token)
+):
+    """
+    Pre-carica i modelli LLM (embedding e chat) per ridurre la latenza.
+    
+    Richiede autenticazione JWT.
+    Esegue query di test per caricare i modelli in memoria.
+    
+    Returns:
+        WarmupResponse con stato del warmup per ogni modello
+    """
+    user = token.get("sub", "unknown")
+    
+    # Log inizio operazione
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.API_REQUEST,
+        user=user,
+        status="info",
+        details="LLM warmup iniziato"
+    )
+    
+    # Esegui warmup
+    manager = get_rag_manager()
+    result = await manager.warmup_llm()
+    
+    # Log risultato
+    log_security_event(
+        request=request,
+        event_type=SecurityEventType.API_REQUEST,
+        user=user,
+        status="info" if result["status"] == "success" else "warning",
+        details=f"LLM warmup completato - Status: {result['status']}"
+    )
     
     return result
 

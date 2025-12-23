@@ -1,8 +1,44 @@
-/* App specific styles can go here if needed to override globals */
 .app-container {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 90vh;
-  width: 100%;
-  overflow: hidden;
+}
+
+/* Markdown content styling */
+.markdown-content p {
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content code {
+  background: var(--bg-tertiary);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.markdown-content pre {
+  background: var(--bg-tertiary);
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.markdown-content li {
+  margin: 0.25rem 0;
 }

@@ -78,5 +78,18 @@ export const api = {
             body: formData
         });
         return handleResponse(response);
+    },
+
+    warmup: async (token) => {
+        const response = await fetch(`${API_URL}/warmup/`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return handleResponse(response);
+    },
+
+    healthCheck: async () => {
+        const response = await fetch(`${API_URL}/health/`);
+        return handleResponse(response);
     }
 };

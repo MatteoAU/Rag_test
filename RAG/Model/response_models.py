@@ -61,3 +61,17 @@ class QueryResponse(BaseModel):
     message: Optional[str] = None
 
 
+class ModelWarmupInfo(BaseModel):
+    """Informazioni sul warmup di un singolo modello"""
+    model: str
+    status: str
+    message: str
+
+
+class WarmupResponse(BaseModel):
+    """Response model per warmup LLM"""
+    status: str
+    embedding_model: ModelWarmupInfo
+    chat_model: ModelWarmupInfo
+
+
